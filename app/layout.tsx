@@ -29,9 +29,9 @@ import { ProSwapWatcher } from '@/components/workbench/ProSwapWatcher';
 import '@fontsource-variable/inter';
 
 export const metadata: Metadata = {
-  title: 'OpenMAIC',
+  title: 'School of AI Classroom',
   description:
-    'The open-source AI interactive classroom. Upload a PDF to instantly generate an immersive, multi-agent learning experience.',
+    'School of AI Classroom. Describe a topic or upload your materials to generate an interactive, multi-agent course.',
 };
 
 export default function RootLayout({

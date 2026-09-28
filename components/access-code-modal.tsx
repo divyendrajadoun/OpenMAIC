@@ -68,8 +68,8 @@ export function AccessCodeModal({ open, onSuccess }: AccessCodeModalProps) {
               style={{
                 backgroundImage: `
                   radial-gradient(ellipse 80% 60% at 20% 40%, var(--primary) 0%, transparent 60%),
-                  radial-gradient(ellipse 60% 80% at 80% 20%, oklch(0.6 0.15 280) 0%, transparent 50%),
-                  radial-gradient(ellipse 50% 50% at 60% 80%, oklch(0.5 0.12 300) 0%, transparent 50%)
+                  radial-gradient(ellipse 60% 80% at 80% 20%, oklch(0.62 0.16 255) 0%, transparent 50%),
+                  radial-gradient(ellipse 50% 50% at 60% 80%, oklch(0.52 0.13 262) 0%, transparent 50%)
                 `,
               }}
             />
@@ -118,7 +118,7 @@ export function AccessCodeModal({ open, onSuccess }: AccessCodeModalProps) {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.25, duration: 0.4 }}
               >
-                OpenMAIC
+                School of AI Classroom
               </motion.p>
 
               {/* Form */}
