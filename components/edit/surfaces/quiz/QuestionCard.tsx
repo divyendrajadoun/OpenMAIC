@@ -87,7 +87,7 @@ export function QuestionCard({ question: q, index, expanded, onToggle }: Props) 
       className={cn(
         'group/card relative overflow-hidden rounded-2xl border bg-white transition-shadow dark:bg-zinc-900',
         expanded
-          ? 'border-violet-200/80 shadow-[0_12px_32px_-16px_rgba(114,46,209,0.35)] dark:border-violet-500/25'
+          ? 'border-violet-200/80 shadow-[0_12px_32px_-16px_rgba(37,99,235,0.35)] dark:border-violet-500/25'
           : 'border-zinc-200/80 hover:border-zinc-300 hover:shadow-[0_8px_24px_-16px_rgba(24,24,27,0.25)] dark:border-zinc-800 dark:hover:border-zinc-700',
       )}
     >
