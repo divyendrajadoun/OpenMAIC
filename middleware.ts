@@ -46,5 +46,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // Vercel's Edge runtime rejects the node:crypto reached through this
+  // middleware's imports; Next.js 16 runs middleware on Node when asked.
+  runtime: 'nodejs',
   matcher: ['/((?!_next/static|_next/image|favicon.ico|logos/).*)'],
 };
