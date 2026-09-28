@@ -25,10 +25,10 @@ export interface BrandConfig {
 
 /** The default brand: the product itself, with no vendor overrides. */
 export const DEFAULT_BRAND: BrandConfig = {
-  productName: 'OpenMAIC',
-  shortName: 'OpenMAIC',
+  productName: 'School of AI Classroom',
+  shortName: 'School of AI',
   logoSrc: '/logo-horizontal.png',
   logoHasWordmark: true,
   markSrc: '/openmaic-mark.png',
-  themeColor: '#722ed1',
+  themeColor: '#2563eb',
 };
