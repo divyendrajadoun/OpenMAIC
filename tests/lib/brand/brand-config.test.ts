@@ -3,10 +3,10 @@ import { DEFAULT_BRAND } from '@/lib/brand/brand-config';
 
 describe('DEFAULT_BRAND (single-brand build)', () => {
   it('uses the original product identity for full chrome', () => {
-    expect(DEFAULT_BRAND.productName).toBe('OpenMAIC');
-    expect(DEFAULT_BRAND.shortName).toBe('OpenMAIC');
+    expect(DEFAULT_BRAND.productName).toBe('School of AI Classroom');
+    expect(DEFAULT_BRAND.shortName).toBe('School of AI');
     expect(DEFAULT_BRAND.markSrc).toBe('/openmaic-mark.png');
-    expect(DEFAULT_BRAND.themeColor).toBe('#722ed1');
+    expect(DEFAULT_BRAND.themeColor).toBe('#2563eb');
   });
 
   it('marks its horizontal logo as already containing the wordmark', () => {
