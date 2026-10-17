@@ -18,6 +18,14 @@ export async function register(): Promise<void> {
   const { warnIfAccessCodeIsUnset } = await import('@/lib/server/access-code-warning');
   warnIfAccessCodeIsUnset(process.env.ACCESS_CODE);
 
+  // School accounts: the session auth method and the class-library hook.
+  // Registered before validation so a bad registration fails the boot, and
+  // only with a database, since there are no accounts to resolve without one.
+  if (process.env.DATABASE_URL?.trim()) {
+    const { registerSchoolHost } = await import('@/lib/server/school/register');
+    registerSchoolHost();
+  }
+
   // A boot that fails here must stop the process. Next.js logs a throw from
   // `register` as "Failed to prepare server" but keeps listening and answers
   // every request with a 500, so the throw alone leaves a deployment that
