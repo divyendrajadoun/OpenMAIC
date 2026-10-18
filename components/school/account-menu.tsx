@@ -1,22 +1,33 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { LogOut, School, UserRound } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { GraduationCap, LogOut, Presentation, School, UserRound } from 'lucide-react';
 
-import { useAccount } from '@/lib/hooks/use-account';
 import { useI18n } from '@/lib/hooks/use-i18n';
+import { STAFF_ROLES, useSchoolContext } from '@/lib/hooks/use-school-context';
 
 /**
  * The account entry in the home page's top-right pill: a sign-in link, or the
- * signed-in name with "My school" and "Sign out". Renders nothing on a
- * deployment without accounts.
+ * signed-in name with links to the role's home, "My school" and "Sign out".
+ * Renders nothing on a deployment without accounts.
+ *
+ * The home page is the lesson generator, which is a teacher's tool: a signed-in
+ * account with only student or parent memberships is sent to My Tutor instead.
  */
 export function AccountMenu({ onOpen }: { onOpen?: () => void }) {
   const { t } = useI18n();
   const router = useRouter();
-  const { loading, enabled, user, logout } = useAccount();
+  const pathname = usePathname();
+  const { loading, enabled, user, memberships, logout } = useSchoolContext();
   const [open, setOpen] = useState(false);
+
+  const isStaff = memberships.some((m) => STAFF_ROLES.has(m.role));
+  const isLearner = !isStaff && memberships.length > 0;
+
+  useEffect(() => {
+    if (!loading && user && isLearner && pathname === '/') router.replace('/learn');
+  }, [loading, user, isLearner, pathname, router]);
 
   if (loading || !enabled) return null;
 
@@ -34,6 +45,20 @@ export function AccountMenu({ onOpen }: { onOpen?: () => void }) {
       </>
     );
   }
+
+  const item = (label: string, icon: React.ReactNode, href: string) => (
+    <button
+      type="button"
+      onClick={() => {
+        setOpen(false);
+        router.push(href);
+      }}
+      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-700"
+    >
+      {icon}
+      {label}
+    </button>
+  );
 
   return (
     <>
@@ -54,17 +79,11 @@ export function AccountMenu({ onOpen }: { onOpen?: () => void }) {
             <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700 truncate">
               {user.email}
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                router.push('/school');
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-700"
-            >
-              <School className="w-4 h-4" />
-              {t('school.mySchool')}
-            </button>
+            {isStaff &&
+              item(t('school.teach.title'), <Presentation className="w-4 h-4" />, '/teach')}
+            {isLearner &&
+              item(t('school.learn.title'), <GraduationCap className="w-4 h-4" />, '/learn')}
+            {item(t('school.mySchool'), <School className="w-4 h-4" />, '/school')}
             <button
               type="button"
               onClick={async () => {

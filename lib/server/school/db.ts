@@ -1,6 +1,6 @@
 /**
  * The school tenancy tables: accounts, sessions, schools, classes, rosters,
- * course assignments and invites.
+ * course assignments, invites, the question bank and saved question papers.
  *
  * They live beside the course tables in the same PostgreSQL database and are
  * created lazily, once per pool, under the same bootstrap lock the persistence
@@ -106,6 +106,36 @@ CREATE TABLE IF NOT EXISTS school_invites (
   max_uses INTEGER,
   uses INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS school_questions (
+  id TEXT PRIMARY KEY,
+  school_id TEXT NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+  created_by TEXT NOT NULL,
+  class_label TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  chapter TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('mcq', 'true_false', 'fill_blank', 'short', 'long')),
+  text TEXT NOT NULL,
+  options JSONB,
+  answer JSONB,
+  explanation TEXT,
+  marks INTEGER NOT NULL DEFAULT 1,
+  difficulty TEXT NOT NULL DEFAULT 'medium' CHECK (difficulty IN ('easy', 'medium', 'hard')),
+  created_at DOUBLE PRECISION NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS school_questions_school_idx ON school_questions (school_id, class_label, subject, chapter);
+
+CREATE TABLE IF NOT EXISTS school_papers (
+  id TEXT PRIMARY KEY,
+  school_id TEXT NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+  created_by TEXT NOT NULL,
+  title TEXT NOT NULL,
+  paper JSONB NOT NULL,
+  created_at DOUBLE PRECISION NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS school_papers_school_idx ON school_papers (school_id, created_at);
 
 CREATE TABLE IF NOT EXISTS school_parent_links (
   parent_user_id TEXT NOT NULL REFERENCES school_users(id) ON DELETE CASCADE,

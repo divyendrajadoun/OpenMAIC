@@ -194,6 +194,11 @@ describe('getVideoExportCoverLabels', () => {
       pblCtaPrompt: 'Möchtest du projektbasiertes Lernen entdecken?',
       ctaVisit: 'Besuche',
     },
+    'hi-IN': {
+      quizCtaPrompt: 'क्या आप इंटरैक्टिव क्विज़ आज़माना चाहेंगे?',
+      pblCtaPrompt: 'क्या आप प्रोजेक्ट-आधारित लर्निंग को एक्सप्लोर करना चाहेंगे?',
+      ctaVisit: 'विज़िट करें',
+    },
     'pt-BR': {
       quizCtaPrompt: 'Quer experimentar um quiz interativo?',
       pblCtaPrompt: 'Quer explorar a aprendizagem baseada em projetos?',

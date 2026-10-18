@@ -6,13 +6,25 @@ import { GraduationCap, LoaderCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import type { AccountMembership } from '@/lib/hooks/use-account';
 import { useI18n } from '@/lib/hooks/use-i18n';
+import { homeForMemberships } from '@/lib/hooks/use-school-context';
 
 type Mode = 'signin' | 'signup';
 
-/** Only same-origin paths are followed after sign-in. */
-function safeNext(value: string | null): string {
-  return value && value.startsWith('/') && !value.startsWith('//') ? value : '/';
+/** Only same-origin paths are followed after sign-in; absent → the role's home. */
+function safeNext(value: string | null): string | null {
+  return value && value.startsWith('/') && !value.startsWith('//') ? value : null;
+}
+
+async function roleHome(): Promise<string> {
+  try {
+    const res = await fetch('/api/auth/me', { cache: 'no-store' });
+    const data = (await res.json()) as { user?: { memberships?: AccountMembership[] } | null };
+    return homeForMemberships(data.user?.memberships ?? []);
+  } catch {
+    return '/';
+  }
 }
 
 export function LoginForm() {
@@ -58,7 +70,7 @@ export function LoginForm() {
       }
       // Work done before signing in (the anonymous trial) moves into the account.
       await fetch('/api/identity/claim', { method: 'POST' }).catch(() => undefined);
-      router.push(next);
+      router.push(next ?? (await roleHome()));
       router.refresh();
     } catch {
       setError(t('school.error'));

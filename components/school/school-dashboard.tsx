@@ -2,8 +2,9 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, Check, Copy, LoaderCircle, Plus, School } from 'lucide-react';
+import { Check, Copy, LoaderCircle, Plus } from 'lucide-react';
 
+import { Section, Shell } from '@/components/school/shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -100,26 +101,6 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-function Section({
-  title,
-  children,
-  action,
-}: {
-  title: string;
-  children: React.ReactNode;
-  action?: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-2xl border border-border/50 bg-card/80 p-5 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
-
 export function SchoolDashboard() {
   const { t } = useI18n();
   const router = useRouter();
@@ -188,38 +169,6 @@ export function SchoolDashboard() {
       )}
       <SchoolView schoolId={schoolId} onOpenClass={(id) => router.push(`/school?class=${id}`)} />
     </Shell>
-  );
-}
-
-function Shell({
-  title,
-  back,
-  children,
-}: {
-  title: string;
-  back?: () => void;
-  children: React.ReactNode;
-}) {
-  const router = useRouter();
-  const { t } = useI18n();
-  return (
-    <div className="min-h-[100dvh] bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4 md:p-8">
-      <div className="mx-auto max-w-4xl">
-        <div className="mb-6 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={back ?? (() => router.push('/'))}
-            className="rounded-full p-2 text-muted-foreground hover:bg-white dark:hover:bg-gray-800"
-            aria-label={t('school.back')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <School className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
-        </div>
-        <div className="space-y-5">{children}</div>
-      </div>
-    </div>
   );
 }
 

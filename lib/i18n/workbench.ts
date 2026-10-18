@@ -738,4 +738,4 @@ export function createWorkbenchTranslator(locale: string): WorkbenchTranslator {
   };
 }
 
-export const defaultWorkbenchTranslator = createWorkbenchTranslator('zh-CN');
+export const defaultWorkbenchTranslator = createWorkbenchTranslator('en-US');
