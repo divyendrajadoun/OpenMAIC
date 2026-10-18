@@ -16,6 +16,9 @@ const log = createLogger('AudioPlayer');
  * endpoint must not pin a playback line indefinitely. */
 const LEGACY_URL_FETCH_TIMEOUT_MS = 15_000;
 
+/** How long an avatar clip may take to start playing before the line falls back to narration. */
+const CLIP_START_TIMEOUT_MS = 8_000;
+
 /** Bytes an audio id currently resolves to, pool first. Loaded lazily to keep
  * this module importable without the media graph. */
 async function resolveBytes(audioId: string): Promise<Blob | null> {
@@ -176,55 +179,96 @@ export class AudioPlayer {
         return false;
       }
 
-      // Stop current playback
-      this.stopAudioElement();
-      if (requestToken !== this.requestToken) return false;
-
-      // Reuse this player's element rather than creating one per line: a new
-      // element's programmatic play() is what mobile autoplay policies refuse,
-      // which left the narration silent from the second line on.
-      this.audio = this.getAudioElement();
-
-      // Set audio source
       const blobUrl = blob ? URL.createObjectURL(blob) : undefined;
-      this.blobUrl = blobUrl ?? null;
-      this.audio.src = blobUrl ?? (directUrl as string);
-      if (this.muted) this.audio.volume = 0;
-      else this.audio.volume = this.volume;
-
-      // Apply playback rate
-      this.audio.defaultPlaybackRate = this.playbackRate;
-      this.audio.playbackRate = this.playbackRate;
-
-      // Set ended callback
-      // Assignment rather than addEventListener: the element is reused, so a
-      // listener would otherwise accumulate once per segment and fire the
-      // callback several times for one line.
-      this.audio.onended = () => {
-        this.releaseBlobUrl(blobUrl);
-        this.onEndedCallback?.();
-      };
-
-      // Play. If play() rejects (autoplay policy, decode error, interrupted
-      // load) the 'ended' listener never fires, so revoke the blob URL here to
-      // avoid leaking it for the lifetime of the document.
-      try {
-        await this.audio.play();
-      } catch (playError) {
-        this.releaseBlobUrl(blobUrl);
-        throw playError;
-      }
-      if (requestToken !== this.requestToken) {
-        this.releaseBlobUrl(blobUrl);
-        return false;
-      }
-      // Re-apply after play() — some browsers reset during load
-      this.audio.playbackRate = this.playbackRate;
-      return true;
+      return await this.startElement(blobUrl ?? (directUrl as string), blobUrl, requestToken);
     } catch (error) {
       log.error('Failed to play audio:', error);
       throw error;
     }
+  }
+
+  /**
+   * Play narration straight from a URL the element can stream (an avatar clip
+   * rendered for this line). Nothing is fetched up front, so playback starts
+   * on the first buffered bytes rather than after the whole file.
+   */
+  public async playUrl(url: string, startTimeoutMs = CLIP_START_TIMEOUT_MS): Promise<boolean> {
+    const requestToken = ++this.requestToken;
+    this.abortLegacyFetch();
+    // A clip that cannot start in time (a stalled network) must not hold the
+    // lesson: give it up and let the caller fall back to ordinary narration.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<false>((resolve) => {
+      timer = setTimeout(() => resolve(false), startTimeoutMs);
+    });
+    const started = await Promise.race([
+      this.startElement(url, undefined, requestToken).catch((error) => {
+        log.error('Failed to play narration clip:', error);
+        return false;
+      }),
+      timeout,
+    ]);
+    clearTimeout(timer);
+    if (!started && requestToken === this.requestToken) this.stopAudioElement();
+    return started;
+  }
+
+  /**
+   * Load `src` into the shared element and play it. `blobUrl` is the object
+   * URL behind `src` when the bytes were fetched, released with the line.
+   */
+  private async startElement(
+    src: string,
+    blobUrl: string | undefined,
+    requestToken: number,
+  ): Promise<boolean> {
+    // Stop current playback
+    this.stopAudioElement();
+    if (requestToken !== this.requestToken) {
+      this.releaseBlobUrl(blobUrl);
+      return false;
+    }
+
+    // Reuse this player's element rather than creating one per line: a new
+    // element's programmatic play() is what mobile autoplay policies refuse,
+    // which left the narration silent from the second line on.
+    this.audio = this.getAudioElement();
+
+    // Set audio source
+    this.blobUrl = blobUrl ?? null;
+    this.audio.src = src;
+    if (this.muted) this.audio.volume = 0;
+    else this.audio.volume = this.volume;
+
+    // Apply playback rate
+    this.audio.defaultPlaybackRate = this.playbackRate;
+    this.audio.playbackRate = this.playbackRate;
+
+    // Set ended callback
+    // Assignment rather than addEventListener: the element is reused, so a
+    // listener would otherwise accumulate once per segment and fire the
+    // callback several times for one line.
+    this.audio.onended = () => {
+      this.releaseBlobUrl(blobUrl);
+      this.onEndedCallback?.();
+    };
+
+    // Play. If play() rejects (autoplay policy, decode error, interrupted
+    // load) the 'ended' listener never fires, so revoke the blob URL here to
+    // avoid leaking it for the lifetime of the document.
+    try {
+      await this.audio.play();
+    } catch (playError) {
+      this.releaseBlobUrl(blobUrl);
+      throw playError;
+    }
+    if (requestToken !== this.requestToken) {
+      this.releaseBlobUrl(blobUrl);
+      return false;
+    }
+    // Re-apply after play() — some browsers reset during load
+    this.audio.playbackRate = this.playbackRate;
+    return true;
   }
 
   /**

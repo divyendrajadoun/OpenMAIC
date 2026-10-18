@@ -2,7 +2,15 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { BookOpenCheck, FileText, Library, LoaderCircle, Presentation, Users } from 'lucide-react';
+import {
+  BookOpenCheck,
+  FileText,
+  Library,
+  LoaderCircle,
+  Presentation,
+  Sparkles,
+  Users,
+} from 'lucide-react';
 
 import { Section, SelectField, Shell } from '@/components/school/shell';
 import { Button } from '@/components/ui/button';
@@ -118,6 +126,12 @@ export function TeacherHome() {
           title={t('school.teach.bank')}
           hint={t('school.teach.bankHint')}
           onClick={() => router.push('/teach/bank')}
+        />
+        <Tile
+          icon={<Sparkles className="h-5 w-5" />}
+          title={t('school.teach.avatar')}
+          hint={t('school.teach.avatarHint')}
+          onClick={() => router.push('/teach/avatar')}
         />
         <Tile
           icon={<Users className="h-5 w-5" />}

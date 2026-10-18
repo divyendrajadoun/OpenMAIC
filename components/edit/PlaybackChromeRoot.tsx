@@ -72,6 +72,7 @@ import {
   getSlideElementTypeLabel,
 } from '@/components/canvas/slide-element-pick-overlay';
 import { shouldClearDraftElementReference } from '@/components/chat/element-reference-receipt';
+import { AvatarPip } from '@/components/classroom/avatar-pip';
 
 type DraftElementReference = {
   reference: ElementReference;
@@ -1773,6 +1774,7 @@ export const PlaybackChromeRoot = forwardRef<PlaybackChromeRootHandle, PlaybackC
                   : undefined
               }
             />
+            <AvatarPip audioPlayer={audioPlayerRef.current} />
           </div>
 
           {/* Roundtable Area */}

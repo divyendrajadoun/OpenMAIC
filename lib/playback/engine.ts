@@ -49,6 +49,7 @@ import { useCanvasStore } from '@/lib/store/canvas';
 import { useSettingsStore } from '@/lib/store/settings';
 import { isTTSProviderEnabled } from '@/lib/audio/provider-enablement';
 import { detectSpeechLang } from '@/lib/audio/browser-tts-preview';
+import { avatarClipUrlFor, publishAvatarClip } from '@/lib/avatar/narration-clips';
 import { createLogger } from '@/lib/logger';
 
 const log = createLogger('PlaybackEngine');
@@ -614,10 +615,20 @@ export class PlaybackEngine {
         // which would hang playback on that slide.
         const hasText = !!speechAction.text.trim();
 
-        this.audioPlayer
-          // The legacy URL of an unconverted pair rides along as the
-          // fallback of last resort; converted documents carry no audioUrl.
-          .play(speechAction.audioId || '', (speechAction as LegacySpeechAction).audioUrl)
+        // A lesson narrated by a teacher's avatar plays that line's clip in
+        // place of the synthesized narration; the choreography around it is
+        // unchanged. A line without a clip, or whose text changed since the
+        // clip was made, falls through to the ordinary narration.
+        const avatarClip = avatarClipUrlFor(speechAction);
+        publishAvatarClip(avatarClip ? { actionId: speechAction.id, url: avatarClip } : null);
+
+        (avatarClip
+          ? this.audioPlayer.playUrl(avatarClip)
+          : this.audioPlayer
+              // The legacy URL of an unconverted pair rides along as the
+              // fallback of last resort; converted documents carry no audioUrl.
+              .play(speechAction.audioId || '', (speechAction as LegacySpeechAction).audioUrl)
+        )
           .then((audioStarted) => {
             if (!this.isCurrentGeneration(generation)) return;
             if (!audioStarted) {

@@ -137,6 +137,60 @@ CREATE TABLE IF NOT EXISTS school_papers (
 
 CREATE INDEX IF NOT EXISTS school_papers_school_idx ON school_papers (school_id, created_at);
 
+CREATE TABLE IF NOT EXISTS school_avatars (
+  id TEXT PRIMARY KEY,
+  school_id TEXT NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+  owner_user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('twin', 'stock')),
+  look_id TEXT NOT NULL,
+  group_id TEXT,
+  voice_id TEXT,
+  preview_image_url TEXT,
+  preview_video_url TEXT,
+  status TEXT NOT NULL CHECK (status IN ('training', 'consent', 'ready', 'failed')),
+  consent_status TEXT,
+  error TEXT,
+  sample_video_id TEXT,
+  sample_video_url TEXT,
+  created_at DOUBLE PRECISION NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS school_avatars_school_idx ON school_avatars (school_id, created_at);
+
+CREATE TABLE IF NOT EXISTS school_lesson_clips (
+  stage_id TEXT NOT NULL,
+  action_id TEXT NOT NULL,
+  school_id TEXT NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+  avatar_id TEXT NOT NULL REFERENCES school_avatars(id) ON DELETE CASCADE,
+  video_id TEXT NOT NULL,
+  text_hash TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('processing', 'completed', 'failed')),
+  video_url TEXT,
+  duration DOUBLE PRECISION,
+  error TEXT,
+  url_checked_at DOUBLE PRECISION,
+  created_at DOUBLE PRECISION NOT NULL,
+  PRIMARY KEY (stage_id, action_id)
+);
+
+CREATE TABLE IF NOT EXISTS school_uploads (
+  id TEXT PRIMARY KEY,
+  school_id TEXT NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  filename TEXT NOT NULL,
+  content_type TEXT NOT NULL,
+  size_bytes BIGINT NOT NULL,
+  created_at DOUBLE PRECISION NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS school_upload_chunks (
+  upload_id TEXT NOT NULL REFERENCES school_uploads(id) ON DELETE CASCADE,
+  idx INTEGER NOT NULL,
+  bytes BYTEA NOT NULL,
+  PRIMARY KEY (upload_id, idx)
+);
+
 CREATE TABLE IF NOT EXISTS school_parent_links (
   parent_user_id TEXT NOT NULL REFERENCES school_users(id) ON DELETE CASCADE,
   student_user_id TEXT NOT NULL REFERENCES school_users(id) ON DELETE CASCADE,
