@@ -31,6 +31,7 @@ import {
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { AccountMenu } from '@/components/school/account-menu';
+import { SchoolNav } from '@/components/school/school-nav';
 import { createLogger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { InputGroup, InputGroupInput, InputGroupButton } from '@/components/ui/input-group';
@@ -861,6 +862,9 @@ function HomePage() {
         >
           {t('home.slogan')}
         </motion.p>
+
+        {/* ── School tools (signed-in teachers and students) ── */}
+        <SchoolNav className="-mt-4 mb-6" />
 
         {/* ── Unified input area ── */}
         <motion.div

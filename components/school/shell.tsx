@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, School } from 'lucide-react';
 
+import { SchoolNav } from '@/components/school/school-nav';
 import { useI18n } from '@/lib/hooks/use-i18n';
 
 /** The page frame shared by the school, teacher and student pages. */
@@ -34,6 +35,7 @@ export function Shell({
           {icon ?? <School className="h-5 w-5 text-primary" />}
           <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
         </div>
+        <SchoolNav className="mb-5 justify-start" />
         <div className="space-y-5">{children}</div>
       </div>
     </div>
