@@ -297,6 +297,54 @@ export function getVideo(videoId: string): Promise<HeyGenVideo> {
   return call<HeyGenVideo>(`/v3/videos/${encodeURIComponent(videoId)}`);
 }
 
+// HyperFrames cloud rendering ---------------------------------------------------
+
+export type HyperframesStatus = 'queued' | 'rendering' | 'completed' | 'failed';
+
+export interface HyperframesRender {
+  render_id: string;
+  status: HyperframesStatus;
+  video_url?: string | null;
+  thumbnail_url?: string | null;
+  duration?: number | null;
+  failure_message?: string | null;
+}
+
+/**
+ * Render an uploaded HyperFrames project zip (a lesson's video export) to an
+ * MP4 on HeyGen's renderers. Resolves to the render id; poll with
+ * {@link getHyperframesRender}.
+ */
+export async function createHyperframesRender(input: {
+  assetId: string;
+  fps: number;
+  quality: 'draft' | 'standard' | 'high';
+  resolution: '1080p' | '4k';
+  title: string;
+}): Promise<string> {
+  const created = await call<{ render_id: string }>('/v3/hyperframes/renders', {
+    body: {
+      project: { type: 'asset_id', asset_id: input.assetId },
+      fps: input.fps,
+      quality: input.quality,
+      format: 'mp4',
+      resolution: input.resolution,
+      aspect_ratio: '16:9',
+      composition: 'index.html',
+      title: input.title,
+    },
+  });
+  return created.render_id;
+}
+
+export function getHyperframesRender(renderId: string): Promise<HyperframesRender> {
+  return call<HyperframesRender>(`/v3/hyperframes/renders/${encodeURIComponent(renderId)}`);
+}
+
+export function deleteHyperframesRender(renderId: string): Promise<unknown> {
+  return call(`/v3/hyperframes/renders/${encodeURIComponent(renderId)}`, { method: 'DELETE' });
+}
+
 /** Run `fn` over `items` with at most `limit` in flight; HeyGen rate-limits bursts. */
 export async function mapLimit<T, R>(
   items: readonly T[],

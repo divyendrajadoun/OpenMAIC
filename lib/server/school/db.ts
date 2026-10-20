@@ -174,22 +174,25 @@ CREATE TABLE IF NOT EXISTS school_lesson_clips (
   PRIMARY KEY (stage_id, action_id)
 );
 
-CREATE TABLE IF NOT EXISTS school_uploads (
+CREATE TABLE IF NOT EXISTS owner_uploads (
   id TEXT PRIMARY KEY,
-  school_id TEXT NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
-  user_id TEXT NOT NULL,
+  owner_id TEXT NOT NULL,
   filename TEXT NOT NULL,
   content_type TEXT NOT NULL,
   size_bytes BIGINT NOT NULL,
   created_at DOUBLE PRECISION NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS school_upload_chunks (
-  upload_id TEXT NOT NULL REFERENCES school_uploads(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS owner_upload_chunks (
+  upload_id TEXT NOT NULL REFERENCES owner_uploads(id) ON DELETE CASCADE,
   idx INTEGER NOT NULL,
   bytes BYTEA NOT NULL,
   PRIMARY KEY (upload_id, idx)
 );
+
+DROP TABLE IF EXISTS school_upload_chunks;
+
+DROP TABLE IF EXISTS school_uploads;
 
 CREATE TABLE IF NOT EXISTS school_parent_links (
   parent_user_id TEXT NOT NULL REFERENCES school_users(id) ON DELETE CASCADE,

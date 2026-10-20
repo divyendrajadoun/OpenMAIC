@@ -3,10 +3,46 @@ import { apiError } from '@/lib/server/api-response';
 import { proxyFetch } from '@/lib/server/proxy-fetch';
 import { resolveRenderServiceUrl } from '@/lib/server/render-service';
 import { createLogger } from '@/lib/logger';
+import { getHyperframesRender } from '@/lib/server/heygen';
+import { heygenRenderId } from '@/lib/server/hyperframes-jobs';
 
 const log = createLogger('ExportVideo Download API');
 
 export const dynamic = 'force-dynamic';
+// A finished HeyGen render streams through here; a long lesson is a large file.
+export const maxDuration = 300;
+
+/**
+ * A HeyGen render's file is a presigned URL on a host that sets no CORS
+ * headers, so the browser could not read a redirect to it: stream it through.
+ */
+async function downloadFromHeyGen(renderId: string) {
+  let render;
+  try {
+    render = await getHyperframesRender(renderId);
+  } catch (error) {
+    log.error(`Failed to read HeyGen render ${renderId}:`, error);
+    return apiError('UPSTREAM_ERROR', 502, 'Render output not available');
+  }
+  if (render.status !== 'completed' || !render.video_url) {
+    return apiError('UPSTREAM_ERROR', 409, 'Render output not available');
+  }
+  const upstream = await fetch(render.video_url);
+  if (!upstream.ok || !upstream.body) {
+    return apiError('UPSTREAM_ERROR', 502, 'Render output not available');
+  }
+  return new NextResponse(upstream.body, {
+    status: 200,
+    headers: {
+      'Content-Type': 'video/mp4',
+      ...(upstream.headers.get('content-length')
+        ? { 'Content-Length': upstream.headers.get('content-length')! }
+        : {}),
+      'Content-Disposition': `attachment; filename="${renderId}.mp4"`,
+      'Cache-Control': 'private, no-store',
+    },
+  });
+}
 
 /**
  * Stream the rendered MP4 back to the browser.
@@ -19,6 +55,8 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(req: NextRequest, context: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await context.params;
+  const renderId = heygenRenderId(jobId);
+  if (renderId) return downloadFromHeyGen(renderId);
   const resolved = resolveRenderServiceUrl();
   if ('error' in resolved) {
     return apiError('PROVIDER_DISABLED', 501, 'Render service is not configured');

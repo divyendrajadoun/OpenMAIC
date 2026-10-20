@@ -38,6 +38,40 @@ type BuildExportZipResult = import('@/lib/video-export-app/build-export-zip').Bu
 const log = createLogger('VideoRenderStore');
 
 const POLL_INTERVAL_MS = 3000;
+
+/**
+ * Hand the bundle to the HeyGen path in chunks: this host caps a request body
+ * well below an export's size, so the archive is parked server-side piece by
+ * piece and the render is submitted by upload id.
+ */
+async function submitInChunks(
+  zipBlob: Blob,
+  options: { fps: VideoFps; quality: VideoQuality; resolution: VideoResolution; title: string },
+): Promise<Response> {
+  const open = await fetch('/api/export-video/upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename: 'project.zip', sizeBytes: zipBlob.size }),
+  });
+  if (!open.ok) return open;
+  const { uploadId, chunkBytes } = (await open.json()) as { uploadId: string; chunkBytes: number };
+  const total = Math.ceil(zipBlob.size / chunkBytes);
+  for (let index = 0; index < total; index++) {
+    const chunk = zipBlob.slice(index * chunkBytes, (index + 1) * chunkBytes);
+    const put = await fetch(`/api/export-video/upload/${uploadId}?index=${index}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: chunk,
+    });
+    if (!put.ok) return put;
+  }
+  return fetch('/api/export-video/render', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uploadId, ...options }),
+  });
+}
+
 const MAX_POLL_ATTEMPTS = Math.ceil((60 * 60 * 1000) / POLL_INTERVAL_MS);
 /** Below this percent the extrapolated ETA is too noisy to show. */
 const ETA_MIN_PERCENT = 3;
@@ -84,6 +118,9 @@ interface JobStatusResponse {
 
 interface VideoRenderState {
   status: VideoRenderStatus;
+  /** Who renders, as the export dialog's capability probe reported it. */
+  provider: 'service' | 'heygen';
+  setProvider: (provider: 'service' | 'heygen') => void;
   /** 0..100. */
   percent: number;
   /** Estimated milliseconds remaining, or null while unknown. */
@@ -144,6 +181,8 @@ function rejectionMessageKey(status: number | null, reason?: string): string | u
 
 export const useVideoRenderStore = create<VideoRenderState>()((set, get) => ({
   status: 'idle',
+  provider: 'service',
+  setProvider: (provider) => set({ provider }),
   percent: 0,
   etaMs: null,
   filename: null,
@@ -279,7 +318,10 @@ export const useVideoRenderStore = create<VideoRenderState>()((set, get) => ({
         intervalMs: POLL_INTERVAL_MS,
         maxAttempts: MAX_POLL_ATTEMPTS,
         submit: async () => {
-          const res = await fetch('/api/export-video/render', { method: 'POST', body: form });
+          const res =
+            get().provider === 'heygen'
+              ? await submitInChunks(zipBlob, { fps, quality, resolution, title: stageName })
+              : await fetch('/api/export-video/render', { method: 'POST', body: form });
           const data = (await res.json().catch(() => ({}))) as {
             jobId?: string;
             error?: string;

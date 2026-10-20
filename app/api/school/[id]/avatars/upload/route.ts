@@ -42,8 +42,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       return ownerApiError('INVALID_REQUEST', 400, 'footage is too large', headers);
     }
     const uploadId = await createUpload(db, {
-      schoolId: id,
-      userId: staff.access.userId,
+      ownerId: principal.ownerId,
       filename,
       contentType,
       sizeBytes,

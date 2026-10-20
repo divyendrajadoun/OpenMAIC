@@ -40,7 +40,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     if (!staff.ok) return staff.response;
     if (!uploadId) return ownerApiError('INVALID_REQUEST', 400, 'uploadId is required', headers);
     const upload = await getUpload(db, uploadId);
-    if (!upload || upload.schoolId !== id || upload.userId !== staff.access.userId) {
+    if (!upload || upload.ownerId !== principal.ownerId) {
       return ownerNotFound(headers);
     }
 

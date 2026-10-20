@@ -8,6 +8,8 @@
  */
 import { proxyFetch } from '@/lib/server/proxy-fetch';
 import { createLogger } from '@/lib/logger';
+import { isServerPersistenceConfigured } from '@/lib/config/feature-flags';
+import { isHeyGenConfigured } from '@/lib/server/heygen';
 
 const log = createLogger('RenderService');
 
@@ -20,6 +22,11 @@ export function getRenderServiceUrl(): string | null {
 /** Whether the render service is configured (URL present — not a reachability check). */
 export function isRenderServiceConfigured(): boolean {
   return getRenderServiceUrl() !== null;
+}
+
+/** HeyGen can render exports when a key is set and uploads can be parked in Postgres. */
+export function isHeyGenRenderConfigured(): boolean {
+  return isHeyGenConfigured() && isServerPersistenceConfigured();
 }
 
 /**
@@ -40,6 +47,12 @@ export function resolveRenderServiceUrl(): { url: string } | { error: 'not_confi
 
 export interface RenderServiceCapability {
   enabled: boolean;
+  /**
+   * Who renders: the operator's render service, or HeyGen's HyperFrames cloud
+   * when no service is configured but a HeyGen key (and the database that
+   * parks the uploaded bundle) is. Omitted when rendering is unavailable.
+   */
+  provider?: 'service' | 'heygen';
   /** Omitted for older services that do not report admission state. */
   accepting?: boolean;
 }
@@ -52,7 +65,9 @@ export interface RenderServiceCapability {
  */
 export async function getRenderServiceCapability(): Promise<RenderServiceCapability> {
   const url = getRenderServiceUrl();
-  if (!url) return { enabled: false };
+  if (!url) {
+    return isHeyGenRenderConfigured() ? { enabled: true, provider: 'heygen' } : { enabled: false };
+  }
   try {
     const res = await proxyFetch(`${url}/health`, {
       method: 'GET',
@@ -64,6 +79,7 @@ export async function getRenderServiceCapability(): Promise<RenderServiceCapabil
     const body = (await res.json().catch(() => null)) as { accepting?: unknown } | null;
     return {
       enabled: true,
+      provider: 'service',
       ...(typeof body?.accepting === 'boolean' ? { accepting: body.accepting } : {}),
     };
   } catch (error) {

@@ -28,7 +28,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     const staff = await requireStaff(db, id, principal, headers);
     if (!staff.ok) return staff.response;
     const upload = await getUpload(db, uploadId);
-    if (!upload || upload.schoolId !== id || upload.userId !== staff.access.userId) {
+    if (!upload || upload.ownerId !== principal.ownerId) {
       return ownerNotFound(headers);
     }
     if (!Number.isInteger(index) || index < 0 || bytes.byteLength === 0) {

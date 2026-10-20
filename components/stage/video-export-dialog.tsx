@@ -32,6 +32,7 @@ import { useI18n } from '@/lib/hooks/use-i18n';
 import { cn } from '@/lib/utils';
 import { useExportVideo } from '@/lib/video-export-app/use-export-video';
 import { useRenderVideo } from '@/lib/video-export-app/use-render-video';
+import { useVideoRenderStore } from '@/lib/store/video-render';
 import { useDownloadSubtitles } from '@/lib/video-export-app/use-download-subtitles';
 import {
   VIDEO_FPS,
@@ -103,6 +104,7 @@ export function VideoExportDialog({
   const { t } = useI18n();
   const { exporting: isExportingVideo, exportVideo } = useExportVideo();
   const { rendering, percent, etaMs, options, setOptions, renderVideo } = useRenderVideo();
+  const setProvider = useVideoRenderStore((s) => s.setProvider);
   const { downloading, downloadSubtitles } = useDownloadSubtitles();
   const { resolution, fps, quality, burnInSubtitles } = options;
   // undefined = unknown (still probing); true/false = capability answer.
@@ -126,9 +128,10 @@ export function VideoExportDialog({
         if (!r.ok) throw new Error('Capability check failed');
         return r.json();
       })
-      .then((d: { enabled?: boolean; accepting?: boolean }) => {
+      .then((d: { enabled?: boolean; accepting?: boolean; provider?: 'service' | 'heygen' }) => {
         if (!active) return;
         setServiceEnabled(Boolean(d.enabled));
+        if (d.provider) setProvider(d.provider);
         setAccepting(d.accepting);
       })
       .catch(() => {
@@ -141,7 +144,7 @@ export function VideoExportDialog({
       active = false;
       controller.abort();
     };
-  }, [open, probeAttempt]);
+  }, [open, probeAttempt, setProvider]);
 
   // Any in-flight export operation (ZIP build, in-app render, or subtitle
   // download) blocks the others — they share one compile/store critical section.

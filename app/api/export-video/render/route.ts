@@ -5,6 +5,15 @@ import { resolveRenderServiceUrl } from '@/lib/server/render-service';
 import { capBodyStream } from '@/lib/server/capped-stream';
 import { clientIdentity } from '@/lib/server/client-identity';
 import { createLogger } from '@/lib/logger';
+import { withRequestOwner } from '@/lib/server/identity/with-owner';
+import { ownerApiError, ownerJson, ownerNotFound } from '@/lib/server/agent-runtime/route-response';
+import { createHyperframesRender, uploadAsset } from '@/lib/server/heygen';
+import { heygenJobId } from '@/lib/server/hyperframes-jobs';
+import { isHeyGenRenderConfigured } from '@/lib/server/render-service';
+import { getSchoolDb } from '@/lib/server/school/db';
+import { heygenFailure } from '@/lib/server/school/heygen-response';
+import { optionalString, readJsonObject } from '@/lib/server/school/http';
+import { assembleUpload, deleteUpload, getUpload } from '@/lib/server/school/uploads';
 
 const log = createLogger('ExportVideo Render API');
 
@@ -27,7 +36,60 @@ const SUBMIT_TIMEOUT_MS = 300_000;
  * `202 { jobId }`. Returns 501 when the service is not configured so the client
  * can degrade to a local ZIP download.
  */
+/**
+ * The HeyGen path: the bundle arrived in chunks (POST /api/export-video/upload)
+ * and is handed to HeyGen's HyperFrames renderer here.
+ * Body: { uploadId, fps?, quality?, resolution?, title? }.
+ */
+async function submitToHeyGen(req: NextRequest) {
+  if (!isHeyGenRenderConfigured()) {
+    return apiError('PROVIDER_DISABLED', 501, 'Render service is not configured');
+  }
+  const parsed = await readJsonObject(req);
+  if (!parsed.ok) return parsed.response;
+  const uploadId = optionalString(parsed.body.uploadId, 80);
+  const fps = Math.min(Math.max(Math.round(Number(parsed.body.fps) || 30), 1), 60);
+  const quality = (['draft', 'standard', 'high'] as const).find((q) => q === parsed.body.quality);
+  const resolution = parsed.body.resolution === '4k' ? '4k' : '1080p';
+  const title = optionalString(parsed.body.title, 200) ?? 'Lesson video';
+
+  return withRequestOwner(req, async (principal, headers) => {
+    if (!uploadId) return ownerApiError('INVALID_REQUEST', 400, 'uploadId is required', headers);
+    const db = await getSchoolDb();
+    const upload = await getUpload(db, uploadId);
+    if (!upload || upload.ownerId !== principal.ownerId) return ownerNotFound(headers);
+    let bundle: Uint8Array;
+    try {
+      bundle = await assembleUpload(db, upload);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'upload incomplete';
+      return ownerApiError('INVALID_REQUEST', 400, message, headers);
+    }
+    try {
+      const assetId = await uploadAsset({
+        filename: upload.filename,
+        contentType: 'application/zip',
+        bytes: bundle,
+      });
+      const renderId = await createHyperframesRender({
+        assetId,
+        fps,
+        quality: quality ?? 'standard',
+        resolution,
+        title,
+      });
+      await deleteUpload(db, uploadId);
+      return ownerJson({ jobId: heygenJobId(renderId), pollIntervalMs: 5000 }, 202, headers);
+    } catch (error) {
+      return heygenFailure(error, headers);
+    }
+  });
+}
+
 export async function POST(req: NextRequest) {
+  if ((req.headers.get('content-type') ?? '').includes('application/json')) {
+    return submitToHeyGen(req);
+  }
   const resolved = resolveRenderServiceUrl();
   if ('error' in resolved) {
     return apiError('PROVIDER_DISABLED', 501, 'Render service is not configured');
